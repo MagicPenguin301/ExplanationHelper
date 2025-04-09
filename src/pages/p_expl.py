@@ -1,12 +1,8 @@
 import streamlit as st
 import explain, utils
 
-
+@utils.after_model_loaded
 def run():
-    st.title("Local Explanation")
-    if not utils.model or not utils.tokenizer:
-        st.warning("The model has not been loaded!")
-        st.stop()
     approach = st.selectbox(
         "Explaining Approach:", ["SHAP", "LIME", "Integrated Gradients"]
     )
@@ -17,4 +13,5 @@ def run():
 
 
 if __name__ == "__main__":
+    st.title("Local Explanation")
     run()
