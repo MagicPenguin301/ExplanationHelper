@@ -1,0 +1,7 @@
+captum==0.7.0
+matplotlib==3.10.1
+pandas==2.2.3
+scikit_learn==1.6.1
+streamlit==1.44.1
+torch==2.3.1
+transformers==4.45.2

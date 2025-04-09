@@ -1,0 +1,4 @@
+model:
+  from_hf: true
+  hf_path: Yueh-Huan/news-category-classification-distilbert
+  local_path: model\##Currently no local model##
