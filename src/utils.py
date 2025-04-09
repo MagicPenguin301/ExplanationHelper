@@ -34,6 +34,14 @@ def init_model():
     tokenizer = AutoTokenizer.from_pretrained(path)
     model = AutoModelForSequenceClassification.from_pretrained(path)
 
+def after_model_loaded(func):
+    def wrapper(*args, **kwargs):
+        if not model or not tokenizer:
+            st.warning("The model has not been loaded!")
+            st.stop()
+        return func(*args, **kwargs)
+    return wrapper
+
 if __name__ == "__main__":
     # only for debug
     data = read_data(r"data\News_Category_Dataset_v3.json")
