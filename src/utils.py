@@ -19,7 +19,7 @@ def read_data(file_path):
         ),
         axis=1
     )
-    return data["concatenated"]
+    return data["concatenated"].to_list(), data["category"].to_list()
 
 def init_model():
     global model, tokenizer
