@@ -1,6 +1,6 @@
 import pandas as pd
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import yaml
+import yaml, streamlit as st, torch
 
 
 with open("config.yaml", "r") as file:
@@ -8,6 +8,7 @@ with open("config.yaml", "r") as file:
 
 tokenizer = None
 model =  None
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def read_data(file_path):
     # For simplicity, the used field names are hard-coded here.
@@ -21,6 +22,7 @@ def read_data(file_path):
     )
     return data["concatenated"].to_list(), data["category"].to_list()
 
+
 def init_model():
     global model, tokenizer
     path = (
@@ -28,7 +30,7 @@ def init_model():
     if config["model"]["from_hf"]
     else config["model"]["local_path"]
     )
-    # by default, it's "Yueh-Huan/news-category-classification-distilbert"
+    # by default, it's "Kirkos27/news-category-dataset-model-distilbert"
     tokenizer = AutoTokenizer.from_pretrained(path)
     model = AutoModelForSequenceClassification.from_pretrained(path)
 
