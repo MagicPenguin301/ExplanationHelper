@@ -1,6 +1,9 @@
 model:
   from_hf: true
   path: dima806/news-category-classifier-distilbert
+eda:
+  text_col: headline
+  cat_col: category
 expl_eval:
   infidelity:
       num_samples: 10
