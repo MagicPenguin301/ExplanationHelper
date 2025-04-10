@@ -4,15 +4,18 @@ from matplotlib import pyplot as plt
 import streamlit as st
 import streamlit.components.v1 as components
 import numpy as np
+from expl_eval import EvalForSHAP, EvalForSaliency
+import pandas as pd
 
-
-def shap_explain(text):
+def shap_explain(text, infidelity=False):
     try:
         pred = utils.classifier
         explainer = shap.Explainer(pred)
         shap_values = explainer([text])
         shap_html = shap.plots.text(shap_values[0], display=False)
         components.html(shap_html, height=300, scrolling=True)
+        return shap_values
+        
 
     except Exception as e:
         st.error(f"An error occurred during SHAP explanation: {e}")
@@ -134,15 +137,25 @@ def saliency_explain(text, desired_label_i):
 
     visualize_saliency_graph(tokens, attributions)
 
+    return attributions
 
-def explain(text: str, approach: str, label_i):
+def explain(text: str, approach: str, label_i, infidelity=False):
     # st.write(type(approach))
+    evals = {}
     match approach:
         case "SHAP":
-            shap_explain(text)
+            shap_values = shap_explain(text)
+            if infidelity:
+                evals["infidelity"] = [EvalForSHAP.compute_infidelity(text, shap_values)]
         case "LIME":
             lime_explain(text, label_i)
         case "Saliency":
-            saliency_explain(text, label_i)
+            attrs =  saliency_explain(text, label_i)
+            if infidelity:
+                evals["infidelity"] = [EvalForSaliency.compute_infidelity(text, attrs, label_i)]
         case _:
-            pass
+            st.error(f"Unexpected explanation approach: {approach}")
+
+    if evals:
+        df = pd.DataFrame(evals)
+        st.write(df, hide_index=True)
