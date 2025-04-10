@@ -3,6 +3,8 @@ import utils
 from matplotlib import pyplot as plt
 import streamlit as st
 import streamlit.components.v1 as components
+import numpy as np
+
 
 def shap_explain(text):
     try:
@@ -16,35 +18,36 @@ def shap_explain(text):
         st.error(f"An error occurred during SHAP explanation: {e}")
 
 
-def lime_explain(text):
+def lime_explain(text, desired_label_i):
     try:
         from lime.lime_text import LimeTextExplainer
         import matplotlib.pyplot as plt
 
         # Create a prediction function for LIME
-        def predict_proba(texts):
-            inputs = utils.tokenizer(
-                texts, padding=True, return_tensors="pt"
-            )  # use utils.tokenizer
-            with torch.no_grad():
-                outputs = utils.model(**inputs)  # use utils.model
-            probas = torch.softmax(outputs.logits, dim=-1).numpy()
-            return probas
+        classifier = transformers.pipeline(
+            "text-classification",
+            model=utils.model,
+            tokenizer=utils.tokenizer,
+            device=utils.device,
+            return_all_scores=True,
+        )
 
-        explainer = LimeTextExplainer(
-            class_names=["Negative", "Positive"]
-        )  # Replace with your class names
-        exp = explainer.explain_instance(text, predict_proba, num_features=42)
+        explainer = LimeTextExplainer(class_names=utils.model.config.id2label.values())
+        exp = explainer.explain_instance(
+            text, classifier, num_features=10, labels=[desired_label_i]
+        )
 
-        # Extract feature names and scores for visualization
-        feature_names = [feature for feature, score in exp.as_list()]
-        scores = [score for feature, score in exp.as_list()]
+        feature_names = [
+            feature for feature, score in exp.as_list(label=desired_label_i)
+        ]
+        scores = [score for feature, score in exp.as_list(label=desired_label_i)]
 
-        # Create a bar chart
         plt.figure(figsize=(10, 6))
         plt.barh(feature_names, scores, color="skyblue")
         plt.xlabel("Contribution Score")
-        plt.title("LIME Explanation")
+        plt.title(
+            f"LIME Explanation for {utils.model.config.id2label[desired_label_i]}"
+        )
         st.pyplot(plt)
         plt.clf()
 
@@ -52,60 +55,94 @@ def lime_explain(text):
         st.error(f"An error occurred during LIME explanation: {e}")
 
 
-def ig_explain(text):
-    """Explain the given text using Integrated Gradients and visualize the results.
-
-    This function uses the Integrated Gradients explainer from the captum library to explain the predictions of a model on the given text and then visualizes the attributions.
-
-    Args:
-        text (str): The text to explain.
-
-    """
-    try:
-        # Tokenize the input text and convert to tensor
-        input_ids = utils.tokenizer(text, return_tensors="pt")["input_ids"]
-
-        # Create a baseline tensor (e.g., embedding of zero tokens)
-        baseline = utils.tokenizer("", return_tensors="pt")["input_ids"]
-
-        # Initialize the Integrated Gradients explainer with the model
-        ig = captum.attr.IntegratedGradients(utils.model)
-
-        # Get the integrated gradients attributions
-        attributions = ig.attribute(input_ids, baselines=baseline)
-
-        # Convert the input text to a list of tokens
-        tokenized_text = utils.tokenizer.tokenize(text)
-
-        # Convert attributions to numpy array and take the absolute value for visualization
-        attr_numpy = attributions.detach().numpy().squeeze(0)
-        abs_attr = abs(attr_numpy)
-
-        # Visualize the attributions using a bar chart
-        plt.figure(figsize=(10, 6))
-        plt.bar(tokenized_text, abs_attr)
-        plt.xlabel("Tokens")
-        plt.ylabel("Attribution Magnitude")
-        plt.title("Integrated Gradients Explanation")
-        plt.xticks(
-            rotation=45, ha="right"
-        )  # Rotate x-axis labels for better readability
-        plt.tight_layout()  # Adjust layout to prevent labels from overlapping
-        st.pyplot(plt)
-        plt.clf()
-
-    except Exception as e:
-        st.error(f"An error occurred during Integrated Gradients explanation: {e}")
+def saliency_explain(text, desired_label_i):
+# sourcery skip: merge-nested-ifs
+    predicted = utils.classifier(text)[0]["label"]
+    
+    if predicted != utils.model.config.id2label[desired_label_i]:
+        st.info(f"The sample text is predicted as **{predicted}**.\n" \
+        "You may choose it in the label field above.")
+    else:
+        st.success(f"**{predicted}** is exactly the predicton of the model.")
 
 
-def explain(text: str, approach: str):
+    if utils.model.config.id2label[desired_label_i] != predicted:
+        st.write("You may choose it in the label field above.")
+
+    inputs = utils.tokenizer(text, return_tensors="pt")
+    input_ids = inputs["input_ids"]
+
+    # Ensure input_ids has a batch dimension
+    input_ids = input_ids if input_ids.ndim == 2 else input_ids.unsqueeze(0)
+    input_embeddings = utils.model.bert.embeddings(input_ids)
+    input_embeddings.requires_grad_()
+
+    def predict(embeddings):
+        inputs_embeds = embeddings
+        attention_mask = inputs.get("attention_mask")
+        token_type_ids = inputs.get("token_type_ids")
+        return utils.model(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+        ).logits
+
+    from captum.attr import Saliency
+
+    saliency = Saliency(predict)
+    attributions = saliency.attribute(input_embeddings, target=desired_label_i)
+
+    attributions = attributions.sum(dim=-1).squeeze(0)
+    attributions = attributions / torch.norm(attributions)
+
+    tokens = utils.tokenizer.convert_ids_to_tokens(input_ids[0])
+
+    # no [CLS] and [SEP]
+    tokens = tokens[1:-1]
+    attributions = attributions[1:-1]
+
+    # token_attributions = list(zip(tokens, attributions.tolist()))
+    # st.write("Token Attributions:", token_attributions)
+    def visualize_saliency_graph(tokens, attributions):
+        plt.rcParams.update({"font.size": 10})
+        fig, ax = plt.subplots(
+            figsize=(8, len(tokens) * 0.6), dpi=150
+        )  # Adjust figure size (width, height)
+
+        normalized_attributions = (attributions - attributions.min()) / (
+            attributions.max() - attributions.min()
+        )
+
+        colors = plt.cm.viridis(normalized_attributions)
+
+        ax.barh(
+            np.arange(len(tokens)),
+            normalized_attributions,
+            color=colors,
+            align="center",
+        )  # Use barh
+        ax.set_yticks(np.arange(len(tokens)))
+        ax.set_yticklabels(tokens, fontsize=8)  # Tokens on y-axis
+        ax.set_xlabel("Normalized Saliency Score", fontsize=10)  # Score on x-axis
+        ax.set_title(
+            f"Saliency Map ({utils.model.config.id2label[desired_label_i]})",
+            fontsize=12,
+        )
+        ax.invert_yaxis()  # To display the first token at the top
+        plt.tight_layout()
+        st.pyplot(fig)
+
+    visualize_saliency_graph(tokens, attributions)
+
+
+def explain(text: str, approach: str, label_i):
     # st.write(type(approach))
     match approach:
         case "SHAP":
             shap_explain(text)
         case "LIME":
-            lime_explain(text)
-        case "Integrated Gradients":
-            ig_explain(text)
+            lime_explain(text, label_i)
+        case "Saliency":
+            saliency_explain(text, label_i)
         case _:
             pass
