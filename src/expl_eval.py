@@ -1,9 +1,7 @@
 import utils
-import shap, torch
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import auc
-from tqdm import tqdm
 import transformers
 import streamlit as st
 from captum.metrics import infidelity
@@ -90,7 +88,6 @@ class EvalForLIME:
         perturbed_texts, deltas = perturb_input(text, num_samples)
         perturbed_preds = EvalForLIME.predict(perturbed_texts)
 
-        # Calculate infidelity
         infidelities = []
         for delta_vec, pert_pred in zip(deltas, perturbed_preds):
             delta_pred = base_pred - pert_pred[desired_label_i]

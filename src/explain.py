@@ -37,7 +37,6 @@ def shap_explain(text, infidelity=False):
 
 def lime_explain(text, desired_label_i, infidelity=False):
     def predict_fn(texts):
-        # Tokenize the texts
         encodings = utils.tokenizer(
             texts, truncation=True, padding=True, return_tensors="pt"
         )

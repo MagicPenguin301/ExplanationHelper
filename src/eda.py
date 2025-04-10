@@ -4,13 +4,6 @@ import streamlit as st
 import utils
 
 def category_balance(df: pd.DataFrame, column: str):
-    """
-    Calculates and displays the category balance for a given column in a DataFrame.
-
-    Args:
-        df (pd.DataFrame): The input DataFrame.
-        column (str): The name of the column containing the categories.
-    """
     category_counts = df[column].value_counts()
     plt.figure(figsize=(10, 6))
     plt.bar(category_counts.index, category_counts.values, color="skyblue")
@@ -24,13 +17,6 @@ def category_balance(df: pd.DataFrame, column: str):
 
 
 def token_length_distribution(df: pd.DataFrame, column: str):
-    """
-    Calculates and displays the token length distribution for a given text column.
-
-    Args:
-        df (pd.DataFrame): The input DataFrame.
-        column (str): The name of the column containing the text data.
-    """
     df['token_length'] = df[column].apply(lambda x: len(utils.tokenizer.tokenize(x)))
     plt.figure(figsize=(10, 6))
     plt.hist(df['token_length'], bins=50, color='skyblue')
