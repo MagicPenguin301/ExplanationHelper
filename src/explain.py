@@ -20,8 +20,6 @@ def show_hint(text, desired_label_i):
         )
     else:
         st.success(f"**{predicted}** is exactly the predicton of the model.")
-    if utils.model.config.id2label[desired_label_i] != predicted:
-        st.write("You may choose it in the label field above.")
 
 
 def shap_explain(text, infidelity=False):
