@@ -1,11 +1,28 @@
-import captum, shap, lime, torch, transformers
+import captum, shap, torch, transformers
+from lime.lime_text import LimeTextExplainer
 import utils
 from matplotlib import pyplot as plt
 import streamlit as st
 import streamlit.components.v1 as components
 import numpy as np
-from expl_eval import EvalForSHAP, EvalForSaliency
+from expl_eval import EvalForSHAP, EvalForSaliency, EvalForLIME
 import pandas as pd
+from lime_fix import get_lime_attributions
+
+
+def show_hint(text, desired_label_i):
+    predicted = utils.classifier(text)[0]["label"]
+
+    if predicted != utils.model.config.id2label[desired_label_i]:
+        st.info(
+            f"The sample text is predicted as **{predicted}**.\n"
+            "You may choose it in the label field above."
+        )
+    else:
+        st.success(f"**{predicted}** is exactly the predicton of the model.")
+    if utils.model.config.id2label[desired_label_i] != predicted:
+        st.write("You may choose it in the label field above.")
+
 
 def shap_explain(text, infidelity=False):
     try:
@@ -15,62 +32,65 @@ def shap_explain(text, infidelity=False):
         shap_html = shap.plots.text(shap_values[0], display=False)
         components.html(shap_html, height=300, scrolling=True)
         return shap_values
-        
 
     except Exception as e:
         st.error(f"An error occurred during SHAP explanation: {e}")
 
 
-def lime_explain(text, desired_label_i):
+def lime_explain(text, desired_label_i, infidelity=False):
+    def predict_fn(texts):
+        # Tokenize the texts
+        encodings = utils.tokenizer(
+            texts, truncation=True, padding=True, return_tensors="pt"
+        )
+        outputs = utils.model(**encodings)
+        logits = outputs.logits
+        probs = torch.nn.functional.softmax(logits, dim=-1)
+        return probs.detach().numpy()
+
     try:
-        from lime.lime_text import LimeTextExplainer
-        import matplotlib.pyplot as plt
-
-        # Create a prediction function for LIME
-        classifier = transformers.pipeline(
-            "text-classification",
-            model=utils.model,
-            tokenizer=utils.tokenizer,
-            device=utils.device,
-            return_all_scores=True,
+        show_hint(text, desired_label_i)
+        explainer = LimeTextExplainer(
+            class_names=[str(i) for i in range(utils.model.config.num_labels)],
+            # in order to calculate infidelity we need to disable it.
+            feature_selection="none" if infidelity else "auto",
+            # but it doesn't work
+            bow=False,
         )
 
-        explainer = LimeTextExplainer(class_names=utils.model.config.id2label.values())
+        # Explain the instance
         exp = explainer.explain_instance(
-            text, classifier, num_features=10, labels=[desired_label_i]
+            text,
+            predict_fn,
+            num_features=len(utils.tokenizer.tokenize(text)),
+            labels=[desired_label_i],
         )
-
+        # st.write(explainer.feature_selection)
+        # Extract feature names and their importance scores
         feature_names = [
             feature for feature, score in exp.as_list(label=desired_label_i)
         ]
         scores = [score for feature, score in exp.as_list(label=desired_label_i)]
 
+        # scores, encoding = get_lime_attributions(text, desired_label_i)
+        # feature_names = utils.tokenizer.convert_ids_to_tokens(encoding)
+        # Plot the explanation
         plt.figure(figsize=(10, 6))
         plt.barh(feature_names, scores, color="skyblue")
         plt.xlabel("Contribution Score")
-        plt.title(
-            f"LIME Explanation for {utils.model.config.id2label[desired_label_i]}"
-        )
+        label_str = utils.model.config.id2label[desired_label_i]
+        plt.title(f"LIME Explanation for Label {label_str}")
         st.pyplot(plt)
         plt.clf()
 
+        return scores
     except Exception as e:
         st.error(f"An error occurred during LIME explanation: {e}")
 
 
 def saliency_explain(text, desired_label_i):
-# sourcery skip: merge-nested-ifs
-    predicted = utils.classifier(text)[0]["label"]
-    
-    if predicted != utils.model.config.id2label[desired_label_i]:
-        st.info(f"The sample text is predicted as **{predicted}**.\n" \
-        "You may choose it in the label field above.")
-    else:
-        st.success(f"**{predicted}** is exactly the predicton of the model.")
-
-
-    if utils.model.config.id2label[desired_label_i] != predicted:
-        st.write("You may choose it in the label field above.")
+    # sourcery skip: merge-nested-ifs
+    show_hint(text, desired_label_i)
 
     inputs = utils.tokenizer(text, return_tensors="pt")
     input_ids = inputs["input_ids"]
@@ -139,6 +159,7 @@ def saliency_explain(text, desired_label_i):
 
     return attributions
 
+
 def explain(text: str, approach: str, label_i, infidelity=False):
     # st.write(type(approach))
     evals = {}
@@ -146,13 +167,27 @@ def explain(text: str, approach: str, label_i, infidelity=False):
         case "SHAP":
             shap_values = shap_explain(text)
             if infidelity:
-                evals["infidelity"] = [EvalForSHAP.compute_infidelity(text, shap_values)]
+                evals["infidelity"] = [
+                    EvalForSHAP.compute_infidelity(text, shap_values)
+                ]
         case "LIME":
-            lime_explain(text, label_i)
-        case "Saliency":
-            attrs =  saliency_explain(text, label_i)
+            scores = lime_explain(text, label_i, infidelity)
             if infidelity:
-                evals["infidelity"] = [EvalForSaliency.compute_infidelity(text, attrs, label_i)]
+                st.info(
+                    "Sorry, I haven't figured out how to correctly implement "
+                    "evaluations for LIME because "
+                    "`feature_selection` in `LimeTextExplainer` doesn't work as intended. "
+                    "I'm trying to implement a LIME for text classification myself. See `lime_fix.py` "
+                )
+                # evals["infidelity"] = [
+                #     EvalForLIME.compute_infidelity(text, scores, label_i)
+                # ]
+        case "Saliency":
+            attrs = saliency_explain(text, label_i)
+            if infidelity:
+                evals["infidelity"] = [
+                    EvalForSaliency.compute_infidelity(text, attrs, label_i)
+                ]
         case _:
             st.error(f"Unexpected explanation approach: {approach}")
 

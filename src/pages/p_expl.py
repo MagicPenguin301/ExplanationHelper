@@ -15,7 +15,7 @@ def run():
     if st.button("explain"):
         with st.spinner("Explaining the sample..."):
             explain.explain(text, approach, label_i, show_infi)
-
+        
 
 if __name__ == "__main__":
     st.title("Local Explanation")
