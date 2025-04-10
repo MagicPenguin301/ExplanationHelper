@@ -1,4 +1,3 @@
 model:
   from_hf: true
-  hf_path: dima806/news-category-classifier-distilbert
-  local_path: model\##Currently no local model##
+  path: dima806/news-category-classifier-distilbert
