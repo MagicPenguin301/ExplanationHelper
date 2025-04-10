@@ -15,8 +15,6 @@ import pandas as pd
 
 def evaluate_and_visualize(texts, true_labels):
     # sourcery skip: extract-duplicate-method, extract-method
-
-    # Create a prediction pipeline
     classifier = utils.classifier
 
     with st.spinner("Getting predictions..."):
@@ -32,10 +30,6 @@ def evaluate_and_visualize(texts, true_labels):
         st.dataframe(df_report)
 
     with st.spinner("Generating the confusion matrix..."):
-        id2label = utils.model.config.id2label
-        # sorted_ids = sorted(id2label.keys())
-
-        # Ensure confusion matrix uses the same order of labels
         unique_labels = np.unique(true_labels)
         cm = confusion_matrix(true_labels, predicted_labels, labels=unique_labels)
 
@@ -54,7 +48,6 @@ def evaluate_and_visualize(texts, true_labels):
     with st.spinner("Generating ROC curve..."):
         if len(np.unique(true_labels)) == 2:
             try:
-                # Convert labels to numerical format if needed
                 label_mapping = {
                     label: i for i, label in enumerate(np.unique(true_labels))
                 }
