@@ -3,12 +3,14 @@ from sklearn.metrics import (
     roc_curve,
     auc,
     confusion_matrix,
+    ConfusionMatrixDisplay,
 )
 import transformers, streamlit as st
 import matplotlib.pyplot as plt
-import seaborn as sns
+
 import numpy as np
 import utils
+import pandas as pd
 
 
 def evaluate_and_visualize(texts, true_labels):
@@ -20,30 +22,42 @@ def evaluate_and_visualize(texts, true_labels):
     with st.spinner("Getting predictions..."):
         predicted_labels = []
         for text in texts:
-            predictions = classifier(text)
-            predicted_label = max(predictions[0], key=lambda x: x["score"])["label"]
+            predicted_label = classifier(text)[0]["label"]
             predicted_labels.append(predicted_label)
 
     with st.spinner("Creating the classification report..."):
-        report = classification_report(true_labels, predicted_labels)
-        st.text("**Classification Report:**")
-        st.text(report)
+        report = classification_report(true_labels, predicted_labels, output_dict=True)
+        df_report = pd.DataFrame(report).transpose()
+        st.write("**Classification Report:**")
+        st.dataframe(df_report)
 
     with st.spinner("Generating the confusion matrix..."):
-        cm = confusion_matrix(true_labels, predicted_labels)
-        fig_cm, ax_cm = plt.subplots()
-        sns.heatmap(cm, annot=True, fmt="d", ax=ax_cm)
-        ax_cm.set_xlabel("Predicted Labels")
-        ax_cm.set_ylabel("True Labels")
-        ax_cm.set_title("Confusion Matrix")
-        st.pyplot(fig_cm)
+        id2label = utils.model.config.id2label
+        # sorted_ids = sorted(id2label.keys())
+
+        # Ensure confusion matrix uses the same order of labels
+        unique_labels = np.unique(true_labels)
+        cm = confusion_matrix(true_labels, predicted_labels, labels=unique_labels)
+
+        # Use the same ordered labels for display
+        disp = ConfusionMatrixDisplay(
+            confusion_matrix=cm, display_labels=unique_labels
+        )
+        fig, ax = plt.subplots(figsize=(10, 8))
+        disp.plot(cmap=plt.cm.Blues, ax=ax)
+        plt.xticks(rotation=45, ha="right")
+        plt.tight_layout()
+        plt.title("Confusion Matrix")
+        st.pyplot(fig)
 
     # ROC curve (only for binary classification)
     with st.spinner("Generating ROC curve..."):
         if len(np.unique(true_labels)) == 2:
             try:
                 # Convert labels to numerical format if needed
-                label_mapping = {label: i for i, label in enumerate(np.unique(true_labels))}
+                label_mapping = {
+                    label: i for i, label in enumerate(np.unique(true_labels))
+                }
                 numerical_true = [label_mapping[label] for label in true_labels]
                 numerical_pred_probs = [
                     classifier(text)[0][1]["score"] for text in texts
