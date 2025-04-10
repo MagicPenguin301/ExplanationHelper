@@ -13,9 +13,6 @@ To run this app, use the following command:
 streamlit run src/app.py
 ```
 
-### Problems to solve
-- `feature_selection='none'` in `LimeTextExplainer` does not work as intended. Therefore, I have to implement a LIME for text from scratch. The structure is written in `lime_fix.py`, but there are bugs in it for now (`LIME.attribute` returns `NoneType`).
-
 ## Interface
 
 ### Homepage
@@ -36,3 +33,6 @@ streamlit run src/app.py
 
 ### Find Mismatches
 <img title="Find Mismatches" alt="Find Mismatches" src="image\finding_mismatch.png">
+
+## Known Issues
+- Infidelity for LIME is disabled because `feature_selection='none'` in `LimeTextExplainer` does not work as intended, which leads to a shape mismatch when calculating the dot product. I tried to implement a LIME for text from scratch and the structure is written in `lime_fix.py`, but there are bugs in it for now (`LIME.attribute` returns `NoneType`).
