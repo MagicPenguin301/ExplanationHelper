@@ -6,13 +6,7 @@ import streamlit.components.v1 as components
 
 def shap_explain(text):
     try:
-        pred = transformers.pipeline(
-        "text-classification",
-        model=utils.model,
-        tokenizer=utils.tokenizer,
-        device=utils.device,
-        return_all_scores=True,
-)
+        pred = utils.classifier
         explainer = shap.Explainer(pred)
         shap_values = explainer([text])
         shap_html = shap.plots.text(shap_values[0], display=False)
