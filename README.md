@@ -6,7 +6,7 @@
 
 - Training is not a part of this prototype-level app, but it has been done in [the original coursework](original_coursework.ipynb). For simplicity, a fine-tuned model will be directly imported from HuggingFace in this demo.
 
-### Running the app
+## Running the app
 To run this app, use the following command:
 
 ```bash
