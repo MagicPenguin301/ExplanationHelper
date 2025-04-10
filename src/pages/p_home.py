@@ -5,8 +5,14 @@ import utils
 def run():
     st.title("Homepage")
     with st.expander("Which model am I using?"):
-        st.write("By default, it's **dima806/news-category-classifier-distilbert** from HuggingFace as an example. Since a model is typically too large to be directly uploaded here, " \
-        "the model path is written in `config.yaml`. Modify that file if needed.")
+        path = utils.config["model"]["path"]
+        from_hf = utils.config["model"]["from_hf"]
+        st.write(
+            f"The current path is **{path}** \
+            {"(HuggingFace)" if from_hf else "(a local path)"}. \
+            Since a model is typically too large to be directly uploaded here, "
+            "the model path is written in `config.yaml`. Modify that file if needed."
+        )
     if utils.model and utils.tokenizer:
         st.success("You have loaded the model!")
     elif st.button("Load the model"):
