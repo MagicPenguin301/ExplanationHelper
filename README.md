@@ -24,8 +24,8 @@
 
 ### Local Explanation
 <img title="SHAP" alt="shap" src="image\shap.png">
-<img title="Saliency1" alt="Saliency1" src="image\Saliency1.png">
-<img title="Saliency2" alt="Saliency2" src="image\Saliency2.png">
+<img title="Saliency1" alt="Saliency1" src="image\saliency1.png">
+<img title="Saliency2" alt="Saliency2" src="image\saliency2.png">
 
 ### Find Mismatches
 <img title="Find Mismatches" alt="Find Mismatches" src="image\finding_mismatch.png">
