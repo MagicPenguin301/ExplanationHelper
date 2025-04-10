@@ -1,5 +1,7 @@
 import transformers, utils
+import streamlit as st
 
+@st.cache_data
 def find_mismatches(texts, labels):
     classifier = transformers.pipeline(
         "text-classification",
