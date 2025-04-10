@@ -31,6 +31,9 @@ def init_model():
     path = config["model"]["path"]
     tokenizer = AutoTokenizer.from_pretrained(path)
     model = AutoModelForSequenceClassification.from_pretrained(path)
+    model.eval()
+    for param in model.parameters():
+        param.requires_grad = True
     classifier = transformers.pipeline(
     "text-classification",
     model=model,
