@@ -6,6 +6,12 @@
 
 - Training is not a part of this prototype-level app, but it has been done in [the original coursework](original_coursework.ipynb). For simplicity, a fine-tuned model will be directly imported from HuggingFace in this demo.
 
+### Running the app
+To run this app, use the following command:
+
+```bash
+streamlit run src/app.py
+
 ### Problems to solve
 - `feature_selection='none'` in `LimeTextExplainer` does not work as intended. Therefore, I have to implement a LIME for text from scratch. The structure is written in `lime_fix.py`, but there are bugs in it for now (`LIME.attribute` returns `NoneType`).
 
