@@ -10,7 +10,6 @@
 - `feature_selection='none'` in `LimeTextExplainer` does not work as intended. Therefore, I have to implement a LIME for text from scratch. The structure is written in `lime_fix.py`, but there are bugs in it for now (`LIME.attribute` returns `NoneType`).
 
 ## Interface
-Some screenshots here.
 
 ### Homepage
 <img title="Homepage" alt="homepage" src="image\model_loaded.png">
