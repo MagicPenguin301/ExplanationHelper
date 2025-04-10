@@ -16,7 +16,7 @@ def run():
     if utils.model and utils.tokenizer:
         st.success("You have loaded the model!")
     elif st.button("Load the model"):
-        with st.spinner("Loading model..."):
+        with st.spinner("Loading..."):
             try:
                 utils.init_model()
                 st.success("Model loaded successfully!")
