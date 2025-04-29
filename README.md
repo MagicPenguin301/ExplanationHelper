@@ -31,6 +31,7 @@ streamlit run src/app.py
 <img title="SHAP" alt="shap" src="image\shap.png">
 <img title="Saliency1" alt="Saliency1" src="image\saliency1.png">
 <img title="Saliency2" alt="Saliency2" src="image\saliency2.png">
+<img title="anchor" alt="anchor" src="image\anchor.png">
 
 #### Find Mismatches
 <img title="Find Mismatches" alt="Find Mismatches" src="image\finding_mismatch.png">

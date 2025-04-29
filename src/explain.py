@@ -8,7 +8,7 @@ import numpy as np
 from expl_eval import EvalForSHAP, EvalForSaliency, EvalForLIME
 import pandas as pd
 from lime_fix import get_lime_attributions
-
+import anchor_expl
 
 def show_hint(text, desired_label_i):
     predicted = utils.classifier(text)[0]["label"]
@@ -179,12 +179,14 @@ def explain(text: str, approach: str, label_i, infidelity=False):
                 # evals["infidelity"] = [
                 #     EvalForLIME.compute_infidelity(text, scores, label_i)
                 # ]
-        case "Saliency":
+        case "IG":
             attrs = saliency_explain(text, label_i)
             if infidelity:
                 evals["infidelity"] = [
                     EvalForSaliency.compute_infidelity(text, attrs, label_i)
                 ]
+        case "Anchor":
+            anchors = anchor_expl.anchor_explain(text)
         case _:
             st.error(f"Unexpected explanation approach: {approach}")
 
